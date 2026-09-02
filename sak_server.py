@@ -484,6 +484,36 @@ def _seed_from_defaults(data):
     return changed
 
 
+# Every top-level key the codebase reads via data["..."] / db_read()["..."].
+# _backfill_schema() guarantees each exists so an older db.json (saved before a
+# key like "site_settings" or "transactions" was introduced) self-heals on the
+# next read instead of throwing a KeyError -> 500 on every request that touches it.
+REQUIRED_DB_KEYS = {
+    "games": list,
+    "products": list,
+    "banners": list,
+    "transactions": list,
+    "site_settings": dict,
+    "next_ids": dict,
+}
+
+
+def _backfill_schema(data):
+    """Add any missing top-level key with an empty default of the right type.
+    Also renames the legacy "orders" key to "transactions" if present, so old
+    db.json files don't end up with both a stale "orders" list and a fresh,
+    empty "transactions" list. Returns True if it changed anything."""
+    changed = False
+    if "orders" in data and "transactions" not in data:
+        data["transactions"] = data.pop("orders")
+        changed = True
+    for key, factory in REQUIRED_DB_KEYS.items():
+        if key not in data:
+            data[key] = factory()
+            changed = True
+    return changed
+
+
 def _load_db():
     if not os.path.exists(DB_PATH):
         if os.path.exists(DEFAULT_DB_PATH):
@@ -494,12 +524,15 @@ def _load_db():
             # empty-but-valid schema instead of crashing (this is the exact
             # FileNotFoundError PVH TOPUP hit on its first deploy).
             print("WARNING: db_default.json not found — starting with an empty database.")
-            data = {"games": [], "products": [], "banners": [], "orders": [], "next_ids": {}}
+            data = {}
+        _backfill_schema(data)
         _save_db(data)
         return data
     with open(DB_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
-    if _seed_from_defaults(data):
+    changed = _seed_from_defaults(data)
+    changed = _backfill_schema(data) or changed
+    if changed:
         _save_db(data)
     return data
 
