@@ -390,6 +390,24 @@ footer .accept-badge svg, footer .accept-badge img{width:14px; height:14px; flex
 .social-link:hover{box-shadow:0 0 12px rgba(201,162,39,.4); border-color:var(--bakong);}
 
 @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important;} }
+
+/* ---------- desktop: frame the phone-width layout instead of stretching it ---------- */
+@media (min-width:701px){
+  html,body{
+    background:
+      repeating-linear-gradient(180deg, transparent 0 3px, rgba(201,162,39,.02) 3px 4px),
+      radial-gradient(ellipse at 20% 0%, rgba(201,162,39,.06), transparent 45%),
+      var(--paper-2);
+  }
+  body{display:flex; justify-content:center;}
+  #app{
+    max-width:460px; width:100%; min-height:100vh;
+    position:relative;
+    background:var(--paper);
+    box-shadow:0 0 0 1px var(--line-strong), 0 20px 60px rgba(0,0,0,.55);
+  }
+  .topbar{position:sticky; top:0;}
+}
 </style>
 </head>
 <body>
